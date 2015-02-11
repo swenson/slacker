@@ -17,26 +17,18 @@ const MaxMessageSize = 1 << 24
 type Rtm struct {
 	ws             *websocket.Conn
 	messageCounter int64
-	in             chan Message
-	out            chan Message
 	error          bool
-}
-
-// Say sends the given message on the given channel.
-// Note that the channel needs to be the channel id, and not the channel name.
-func (rtm *Rtm) Say(channel, text string) {
-	rtm.out <- Message(map[string]interface{}{"type": "message", "channel": channel, "text": text})
 }
 
 // RtmConnect connects to the given URL, which should be an authenticated URL
 // from the rtm.start API call.
-func RtmConnect(url string) (*Rtm, error) {
+func RtmConnect(slack *Slack, url string) (*Rtm, error) {
 	ws, err := websocket.Dial(url, "", "http://localhost")
 	if err != nil {
 		return nil, err
 	}
 
-	rtm := &Rtm{ws, 1, make(chan Message), make(chan Message), false}
+	rtm := &Rtm{ws, 1, false}
 
 	go func() {
 		for {
@@ -47,13 +39,13 @@ func RtmConnect(url string) (*Rtm, error) {
 				rtm.error = true
 				return
 			}
-			rtm.in <- message
+			slack.in <- message
 		}
 	}()
 
 	go func() {
 		for {
-			message := <-rtm.out
+			message := <-slack.out
 			counter := atomic.AddInt64(&rtm.messageCounter, 1) - 1
 			message["id"] = counter
 			fmt.Printf("Sending %v\n", message)
@@ -61,6 +53,7 @@ func RtmConnect(url string) (*Rtm, error) {
 			if err != nil {
 				fmt.Printf("Error in websocket receive: %s", err.Error())
 				rtm.error = true
+				slack.out <- message
 				return
 			}
 		}

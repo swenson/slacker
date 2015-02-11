@@ -21,6 +21,8 @@ const RtmStart = "rtm.start"
 type Slack struct {
 	apiToken string
 	rtm      *Rtm
+	in       chan Message
+	out      chan Message
 }
 
 // RtmStartResponse is the JSON response from the rtm.start method.
@@ -148,14 +150,20 @@ func (s *Slack) connect() error {
 		}
 	}
 
-	s.rtm, err = RtmConnect(url.String())
+	s.rtm, err = RtmConnect(s, url.String())
 	return err
+}
+
+// Say sends the given message on the given channel.
+// Note that the channel needs to be the channel id, and not the channel name.
+func (s *Slack) Say(channel, text string) {
+	s.out <- Message(map[string]interface{}{"type": "message", "channel": channel, "text": text})
 }
 
 // Connect uses the given token to create a Slack API object, and starts
 // up a RTM connection.
 func Connect(token string) (*Slack, error) {
-	slack := &Slack{token, nil}
+	slack := &Slack{token, nil, make(chan Message), make(chan Message)}
 	err := slack.connect()
 	if err != nil {
 		return nil, err

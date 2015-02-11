@@ -36,7 +36,7 @@ func (b *Bot) ClearResponses() {
 
 func (b *Bot) run() {
 	for {
-		message := <-b.slack.rtm.in
+		message := <-b.slack.in
 		fmt.Printf("Incoming %v\n", message)
 		kind, ok := message["type"]
 		if !ok {
@@ -55,7 +55,7 @@ func (b *Bot) run() {
 		for _, rule := range b.rules {
 			parts := rule.matchRe.FindStringSubmatch(text)
 			if parts != nil {
-				b.slack.rtm.Say(channel, rule.exec(user, parts))
+				b.slack.Say(channel, rule.exec(user, parts))
 			}
 		}
 	}
