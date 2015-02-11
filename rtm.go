@@ -3,6 +3,7 @@ package slacker
 import (
 	"fmt"
 	"sync/atomic"
+	"time"
 
 	"golang.org/x/net/websocket"
 )
@@ -36,12 +37,24 @@ func RtmConnect(url string) (*Rtm, error) {
 	}
 
 	rtm := &Rtm{ws, 1, make(chan Message), make(chan Message)}
+
+	reconnect := func(err error) {
+		fmt.Printf("Error in websocket: %s. Reconnecting...", err.Error())
+		for err != nil {
+			rtm.ws, err = websocket.Dial(url, "", "http://localhost")
+			if err != nil {
+				fmt.Printf("Error in websocket: %s. Reconnecting...", err.Error())
+				time.Sleep(1 * time.Second)
+			}
+		}
+	}
+
 	go func() {
 		for {
 			message := Message{}
 			err := websocket.JSON.Receive(rtm.ws, &message)
 			if err != nil {
-				panic(err)
+				reconnect(err)
 			}
 			rtm.in <- message
 		}
@@ -55,7 +68,7 @@ func RtmConnect(url string) (*Rtm, error) {
 			fmt.Printf("Sending %v\n", message)
 			err := websocket.JSON.Send(rtm.ws, message)
 			if err != nil {
-				panic(err)
+				reconnect(err)
 			}
 		}
 	}()
