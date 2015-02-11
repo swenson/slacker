@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 )
 
 // the base URL for the Slack web API
@@ -159,5 +160,19 @@ func Connect(token string) (*Slack, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	// try to reconnect if we get disconnected
+	go func() {
+		for {
+			for !slack.rtm.error {
+				time.Sleep(100 * time.Millisecond)
+			}
+			err := slack.connect()
+			if err != nil {
+				panic(err)
+			}
+		}
+	}()
+
 	return slack, nil
 }

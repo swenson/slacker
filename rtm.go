@@ -3,7 +3,6 @@ package slacker
 import (
 	"fmt"
 	"sync/atomic"
-	"time"
 
 	"golang.org/x/net/websocket"
 )
@@ -20,6 +19,7 @@ type Rtm struct {
 	messageCounter int64
 	in             chan Message
 	out            chan Message
+	error          bool
 }
 
 // Say sends the given message on the given channel.
@@ -36,25 +36,16 @@ func RtmConnect(url string) (*Rtm, error) {
 		return nil, err
 	}
 
-	rtm := &Rtm{ws, 1, make(chan Message), make(chan Message)}
-
-	reconnect := func(err error) {
-		fmt.Printf("Error in websocket: %s. Reconnecting...", err.Error())
-		for err != nil {
-			rtm.ws, err = websocket.Dial(url, "", "http://localhost")
-			if err != nil {
-				fmt.Printf("Error in websocket: %s. Reconnecting...", err.Error())
-				time.Sleep(1 * time.Second)
-			}
-		}
-	}
+	rtm := &Rtm{ws, 1, make(chan Message), make(chan Message), false}
 
 	go func() {
 		for {
 			message := Message{}
 			err := websocket.JSON.Receive(rtm.ws, &message)
 			if err != nil {
-				reconnect(err)
+				fmt.Printf("Error in websocket receive: %s", err.Error())
+				rtm.error = true
+				return
 			}
 			rtm.in <- message
 		}
@@ -68,7 +59,9 @@ func RtmConnect(url string) (*Rtm, error) {
 			fmt.Printf("Sending %v\n", message)
 			err := websocket.JSON.Send(rtm.ws, message)
 			if err != nil {
-				reconnect(err)
+				fmt.Printf("Error in websocket receive: %s", err.Error())
+				rtm.error = true
+				return
 			}
 		}
 	}()
