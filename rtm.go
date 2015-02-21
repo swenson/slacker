@@ -3,6 +3,7 @@ package slacker
 import (
 	"fmt"
 	"sync/atomic"
+	"time"
 
 	"golang.org/x/net/websocket"
 )
@@ -30,12 +31,21 @@ func RtmConnect(slack *Slack, url string) (*Rtm, error) {
 
 	rtm := &Rtm{ws, 1, false}
 
+	// start ping keep-aliver
+	go func() {
+		tick := time.Tick(30 * time.Second)
+		for {
+			<-tick
+			slack.out <- map[string]interface{}{"type": "ping"}
+		}
+	}()
+
 	go func() {
 		for {
 			message := Message{}
 			err := websocket.JSON.Receive(rtm.ws, &message)
 			if err != nil {
-				fmt.Printf("Error in websocket receive: %s", err.Error())
+				fmt.Printf("Error in websocket receive: %s\n", err.Error())
 				rtm.error = true
 				return
 			}
