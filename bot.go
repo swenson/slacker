@@ -55,7 +55,10 @@ func (b *Bot) run() {
 		for _, rule := range b.rules {
 			parts := rule.matchRe.FindStringSubmatch(text)
 			if parts != nil {
-				b.slack.Say(channel, rule.exec(user, parts))
+				text = rule.exec(user, parts)
+				if text != "" {
+					b.slack.Say(channel, text)
+				}
 			}
 		}
 	}
