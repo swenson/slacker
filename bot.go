@@ -57,7 +57,7 @@ func (b *Bot) run() {
 			if parts != nil {
 				text = rule.exec(user, parts)
 				if text != "" {
-					b.slack.Say(channel, text)
+					b.slack.SayID(channel, text)
 				}
 			}
 		}
@@ -70,4 +70,9 @@ func (b *Bot) run() {
 // the regular expression groups.
 func (b *Bot) RespondWith(re string, exec func(string, []string) string) {
 	b.rules = append(b.rules, Rule{regexp.MustCompile(re), exec})
+}
+
+// Say posts a message to a given channel.  The channel can be a name or an ID.
+func (b *Bot) Say(channel, message string) error {
+	return b.slack.Say(channel, message)
 }

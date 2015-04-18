@@ -85,6 +85,12 @@ type SetValue struct {
 	LastSet int64  `json:"last_set"`
 }
 
+type chatPostmessageResponse struct {
+	OK        bool    `json:"ok"`
+	Timestamp int64   `json:"ts"`
+	Channel   Channel `json:"channel"`
+}
+
 // Group is a placeholder for now.
 type Group struct {
 }
@@ -154,10 +160,23 @@ func (s *Slack) connect() error {
 	return err
 }
 
-// Say sends the given message on the given channel.
+// SayID sends the given message on the given channel.
 // Note that the channel needs to be the channel id, and not the channel name.
-func (s *Slack) Say(channel, text string) {
+func (s *Slack) SayID(channel, text string) {
 	s.out <- Message(map[string]interface{}{"type": "message", "channel": channel, "text": text})
+}
+
+// Say sends the given message on the given channel. channel can be an id or a name.
+func (s *Slack) Say(channel, text string) error {
+	var resp chatPostmessageResponse
+	err := s.post("chat.postMessage", map[string]string{"channel": channel, "text": text, "as_user": "true"}, &resp)
+	if err != nil {
+		return err
+	}
+	if !resp.OK {
+		return fmt.Errorf("Failed to send message.")
+	}
+	return nil
 }
 
 // Connect uses the given token to create a Slack API object, and starts
