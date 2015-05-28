@@ -117,11 +117,12 @@ func (s *Slack) post(endpoint string, params map[string]string, value interface{
 	if err != nil {
 		return err
 	}
+
+	defer resp.Body.Close()
+
 	if resp.StatusCode != 200 {
 		return fmt.Errorf("Slack returned non-200 status code of %d", resp.StatusCode)
 	}
-
-	defer resp.Body.Close()
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
