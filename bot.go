@@ -64,6 +64,11 @@ func (b *Bot) run() {
 	}
 }
 
+// GetUser gets information about a user (by ID).
+func (b *Bot) GetUser(id string) (*User, error) {
+	return b.slack.GetUser(id)
+}
+
 // RespondWith responds to the given regular expression, if it matches
 // anywhere in the string, by executing the given function to construct
 // a response. The exec arguments are the user id and the array of

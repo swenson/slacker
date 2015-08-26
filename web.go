@@ -41,11 +41,18 @@ type RtmStartResponse struct {
 
 // User is the Slack API's user response object.
 type User struct {
-	ID             string                 `json:"id"`
-	Name           string                 `json:"name"`
-	Prefs          map[string]interface{} `json:"prefs"`
-	Created        int64                  `json:"created"`
-	ManualPresence string                 `json:"manual_presence"`
+	ID                string                 `json:"id"`
+	Name              string                 `json:"name"`
+	Deleted           bool                   `json:"deleted"`
+	Color             string                 `json:"color"`
+	Profile           map[string]interface{} `json:"profile"`
+	IsAdmin           bool                   `json:"is_admin"`
+	IsOwner           bool                   `json:"is_owner"`
+	IsPrimaryOwner    bool                   `json:"is_primary_owner"`
+	IsRestricted      bool                   `json:"is_restricted"`
+	IsUltraRestricted bool                   `json:"is_ultra_restricted"`
+	Has2fa            bool                   `json:"has_2fa"`
+	HasFiles          bool                   `json:"has_files"`
 }
 
 // Team is the Slack API's team response object.
@@ -159,6 +166,23 @@ func (s *Slack) connect() error {
 
 	s.rtm, err = RtmConnect(s, url.String())
 	return err
+}
+
+// GetUser returns a Slack user's information by ID.
+func (s *Slack) GetUser(id string) (*User, error) {
+	resp := struct {
+		OK    bool   `json:"ok"`
+		User  *User  `json:"user"`
+		Error string `json:"error"`
+	}{}
+	err := s.post("users.info", map[string]string{"user": id}, &resp)
+	if err != nil {
+		return nil, err
+	}
+	if resp.OK != true {
+		return nil, fmt.Errorf("Slack API error: %s", resp.Error)
+	}
+	return resp.User, nil
 }
 
 // SayID sends the given message on the given channel.
